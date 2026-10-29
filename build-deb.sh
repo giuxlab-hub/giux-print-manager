@@ -7,7 +7,7 @@ trap 'rm -rf "$S"' EXIT
 mkdir -p "$S/DEBIAN" "$S/usr/bin" "$S/usr/share/giux-print-manager/profiles" "$S/usr/share/applications" "$S/usr/share/doc/giux-print-manager" "$S/usr/share/icons/hicolor/scalable/apps"
 install -m 755 giux-print-manager "$S/usr/bin/giux-print-manager"
 install -m 644 profiles/*.json "$S/usr/share/giux-print-manager/profiles/"
-install -m 644 README.md "$S/usr/share/doc/giux-print-manager/README.md"
+install -m 644 README.original.md "$S/usr/share/doc/giux-print-manager/README.md"
 cat > "$S/DEBIAN/control" <<'CONTROL'
 Package: giux-print-manager
 Version: 0.1.1

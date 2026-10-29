@@ -52,7 +52,7 @@ cd giux-print-manager
 ./build-deb.sh
 ```
 
-The repository builder writes `giux-print-manager_0.1.1_all.deb` in the checkout directory. Only its output path has been adapted for portability; the full original build script is preserved in the v0.1.1 source archive.
+The repository builder writes `giux-print-manager_0.1.1_all.deb` in the checkout directory. Its output path is portable and its installed documentation is taken from `README.original.md`; the full original builder is preserved in the v0.1.1 source archive.
 
 ## Current limitations
 

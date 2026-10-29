@@ -20,7 +20,7 @@ The repository includes a new bilingual `README.md` and this provenance note; `R
 
 Original Debian assets, including the desktop launcher and SVG icon, are available under `packaging/` for inspection. The `COPYING` text is the author's original GPLv3 license file.
 
-**Build script portability:** The only change to the 0.1.1 repository builder is its final output path, from the author's fixed absolute path under `/home/giu` to a relative file in the project directory. The original script is preserved in the unchanged source tarball attached to GitHub Releases.
+**Build script portability:** The repository builder changes the final output path from the author's fixed absolute path under `/home/giu` to a relative file, and selects `README.original.md` for the Debian-installed documentation so the published GitHub landing README does not replace the original package guide. The original script is preserved in the unchanged source tarball attached to GitHub Releases.
 
 ## Validation scope
 
