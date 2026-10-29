@@ -30,6 +30,8 @@ class InstalledLauncherContracts(unittest.TestCase):
                 "giux_ocr_workspace.py",
                 "giux_image_canvas.py",
                 "giux_image_filters.py",
+                "giux_album_core.py",
+                "giux_album_workspace.py",
             ):
                 shutil.copyfile(ROOT / name, module_dir / name)
 
@@ -42,7 +44,8 @@ class InstalledLauncherContracts(unittest.TestCase):
                 "namespace=runpy.run_path(str(launcher),run_name='__test_import_only__'); "
                 "assert namespace['PhotoEditor'].__module__=='photo_editor'; "
                 "assert pathlib.Path(sys.modules['photo_editor'].__file__).resolve().parent==modules; "
-                "assert pathlib.Path(sys.modules['giux_ocr_workspace'].__file__).resolve().parent==modules"
+                "assert pathlib.Path(sys.modules['giux_ocr_workspace'].__file__).resolve().parent==modules; "
+                "assert pathlib.Path(sys.modules['giux_album_workspace'].__file__).resolve().parent==modules"
             )
             env = os.environ.copy()
             env.pop("PYTHONPATH", None)
@@ -59,8 +62,8 @@ class InstalledLauncherContracts(unittest.TestCase):
 
     def test_builder_version(self):
         text = (ROOT / "build-deb.sh").read_text(encoding="utf-8")
-        self.assertIn("V=0.3.2", text)
-        self.assertIn("Version: 0.3.2", text)
+        self.assertIn("V=0.4.0", text)
+        self.assertIn("Version: 0.4.0", text)
 
 
 if __name__ == "__main__":

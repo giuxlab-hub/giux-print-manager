@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — Album Composer
+
+- Added a separate Album tab, album model and Pillow-based page renderer.
+- Added accurate page preview, 1/2/4/6/9-photo templates, portrait/landscape and paper format choices, title/captions/footer and decorative backgrounds.
+- Added multiple album pages, automatic continuation for photo batches, zoom/pan preview and open/save `.gpa` UTF-8 project files.
+- Added PNG (current page), PDF (all pages) export and opt-in CUPS print of the album.
+- Kept Photo Print, Scanner/OCR, ImageMagick and printer profiles independent and unchanged.
+- Published release using the author-evaluated local 0.4.0 package without changing its original archives.
+
 ## 0.3.2 — Launch fix
 
 - Fix the startup import-order regression in the v0.3.1 Debian package: installed `photo_editor.py` and OCR helpers are resolved before imports.

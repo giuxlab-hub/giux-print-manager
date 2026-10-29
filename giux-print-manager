@@ -15,6 +15,7 @@ if not MODULE_DIRECTORY.is_dir():
 sys.path.insert(0, str(MODULE_DIRECTORY))
 from photo_editor import PhotoEditor, render_print_page
 from giux_ocr_workspace import OCRWorkspace
+from giux_album_workspace import AlbumWorkspace
 
 PROFILES=Path("/usr/share/giux-print-manager/profiles")
 HOME_PROFILES=Path.home()/".config/giux-print-manager/profiles"
@@ -170,11 +171,12 @@ def load_profiles():
 class Manager(Gtk.Window):
     def __init__(self):
         super().__init__(title="GiuxLab Print & Scan Manager")
-        self.set_default_size(810,650);self.set_border_width(12)
+        self.set_default_size(1140,800);self.set_border_width(12)
         self.connect("destroy",self.on_destroy)
         self.lang=0 if os.environ.get("LANG","").lower().startswith("it") else 1
         self.profiles=load_profiles();self.scan_env=scanner_environment(self.profiles);self.image_path=None
         self.photo_editor=None
+        self.album_workspace=None
         self.ocr_windows=[]
         self.root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);self.add(self.root)
         header=Gtk.Box(spacing=10)
@@ -189,6 +191,7 @@ class Manager(Gtk.Window):
         self.build()
     def on_destroy(self,*_):
         if self.photo_editor is not None:self.photo_editor.close()
+        if self.album_workspace is not None:self.album_workspace.close()
         Gtk.main_quit()
     def tr(self,key):return T.get(key,(key,key))[self.lang]
     def label(self,key):return Gtk.Label(label=self.tr(key),xalign=0)
@@ -220,16 +223,19 @@ class Manager(Gtk.Window):
         return False
     def build(self):
         while self.pages.get_n_pages():self.pages.remove_page(0)
-        self.build_printers();self.build_photo();self.build_scanner();self.build_modules()
+        self.build_printers();self.build_photo();self.build_album();self.build_scanner();self.build_modules()
         self.notice.set_text(self.tr("ready"));self.show_all()
         self.refresh()
     def change_language(self,w):
         i=w.get_active()
         if i==self.lang or i<0:return
         snapshot=self.photo_editor.export_state() if self.photo_editor else None
+        album_snapshot=self.album_workspace.export_state() if self.album_workspace else None
+        active_tab=self.pages.get_current_page()
         options={key:getattr(self,key).get_active_id() for key in ("size","media","quality","layout")}
         self._retained_printer_queues=(self.printer.get_active_id(),self.photo_printer.get_active_id())
         if self.photo_editor is not None:self.photo_editor.close()
+        if self.album_workspace is not None:self.album_workspace.close()
         self.lang=i
         self.build()
         for key,value in options.items():
@@ -237,6 +243,10 @@ class Manager(Gtk.Window):
         if snapshot is not None:
             try:self.photo_editor.restore_state(snapshot)
             except Exception as exc:self.dialog("error",exc)
+        if album_snapshot is not None:
+            try:self.album_workspace.restore_state(album_snapshot)
+            except Exception as exc:self.dialog("error",exc)
+        self.pages.set_current_page(active_tab)
     def profile(self,name):
         for p in reversed(self.profiles):
             if p["match"].casefold() in name.casefold():return p
@@ -285,6 +295,14 @@ class Manager(Gtk.Window):
         box.pack_start(tools,False,False,0)
         box.pack_start(self.label("note"),False,False,0)
         self.pages.append_page(box,self.label("printers"))
+    def build_album(self):
+        self.album_workspace=AlbumWorkspace(
+            language="it" if self.lang==0 else "en",
+            get_printer=lambda:self.photo_printer.get_active_id(),
+            status=lambda message:self.notice.set_text(message[:220]),
+        )
+        self.pages.append_page(self.album_workspace, Gtk.Label(label="Album"))
+
     def build_photo(self):
         box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=7,margin=6)
         self.photo_printer=self.row(box,"printer",Gtk.ComboBoxText())

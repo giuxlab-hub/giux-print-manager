@@ -1,4 +1,4 @@
-# GiuxLab Print & Scan Manager 0.3.2
+# GiuxLab Print & Scan Manager 0.4.0 (Album Composer)
 
 GTK3 desktop manager for Linux printing, photo editing/printing and SANE scanning.
 
@@ -27,10 +27,10 @@ The device profile system remains experimental: current modules are declarative 
 
 ## Install
 
-Install the packaged `giux-print-manager_0.3.2_all.deb` with:
+Install the packaged `giux-print-manager_0.4.0_all.deb` with:
 
 ```bash
-sudo apt install ./giux-print-manager_0.3.2_all.deb
+sudo apt install ./giux-print-manager_0.4.0_all.deb
 ```
 
 The package requires Python 3, GTK3 PyGObject, Pillow, CUPS tools, SANE tools, `sane-airscan`, `xdg-utils` and **ImageMagick 7**. XSane is optional.
@@ -60,3 +60,11 @@ Version 0.3.2 also integrates the author's separate scanner-image editor from 0.
 ## 0.3.2 startup correction
 
 The launcher now resolves the installed helper-module directory before importing the photo editor and OCR workspace. This corrects the failure to open the v0.3.1 Debian package from the Linux desktop menu.
+
+## 0.4.0 — Album Composer
+
+The Album tab composes one or more photo pages with 1/2/4/6/9 photos, title, image captions, footer message and simple decorative page presets. Preview zoom/pan does not affect printed layout. Add photos, choose a template/background and preview the actual page. Export one page to PNG or the entire album to PDF, or print all pages with explicit confirmation via the existing CUPS queue.
+
+A project is saved as a UTF-8 JSON `.gpa` file. Image paths are stored relative to the project directory where possible; photos are linked rather than embedded. For portable sharing, copy the album and its referenced image files together. The original photos are never altered.
+
+Version 0.4.0 was evaluated by the author and subsequently published without altering the distributed package. Print/scan hardware tests were not performed by this build step.

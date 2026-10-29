@@ -2,11 +2,33 @@
 
 **Experimental, modular GTK3 desktop application for Linux printing, photo layouts and SANE scanning.**
 
-**Latest version:** 0.3.2 · **Languages:** Italian and English · **License:** GPL-3.0-or-later · **Platform:** Debian/Linux
+**Latest release:** 0.4.0 (Album Composer) · **Languages:** Italian and English · **License:** GPL-3.0-or-later · **Platform:** Debian/Linux
 
 [Download Debian package and original source](https://github.com/giuxlab-hub/giux-print-manager/releases/latest) · [Giux-Lab](https://giux-lab.it/) · [Original README](README.original.md)
 
 GiuxLab Print & Scan Manager integrates three distinct workflows into one desktop interface: CUPS printer queues, photo printing, and SANE scanner acquisition. Printer-model extensions are currently **declarative JSON profiles**, not independent executable plugins. The architecture is an early-stage project and is published as such.
+
+## 0.4.0 — Album Composer
+
+A separate **Album** tab adds print-page preview and photo album layout composition. It does not replace the existing one-photo print editor or the scanner/OCR workspace.
+
+- **Real page preview:** same mm-based geometry and Pillow renderer for preview (150 DPI), exported PNG/PDF and CUPS job output (300 DPI); zoom and pan only navigate the preview.
+- **Multiple photos per page:** templates with 1, 2, 4, 6 or 9 photo slots. Add several JPEG/PNG/TIFF images in one operation; extra images automatically continue onto new pages.
+- **Albums with multiple pages:** add/remove/previous/next page; select paper A4/A5/4×6/5×7 and portrait/landscape.
+- **Text:** independent per-page title, footer message and caption for each photo.
+- **Decorations:** White/Cream/Sky/Rose backgrounds, Classic/Confetti/Botanical decoration presets, Fit/Fill photo placement.
+- **Project saving:** open/save UTF-8 `.gpa` JSON projects; image files are linked by relative paths when possible, not embedded.
+- **Outputs:** current page as 300-DPI PNG, all pages as PDF, and full-album printing via the existing CUPS queue after explicit confirmation.
+
+These options are available through buttons, dropdowns and text fields. They do not modify original photos or CUPS/SANE settings. The 0.4.0 package has been evaluated by its author and is published as the current release.
+
+**Installation from the user's home directory:**
+
+```bash
+sudo apt install ~/giux-print-manager_0.4.0_all.deb
+```
+
+**Note:** a `.gpa` project contains references to image files. Keep those files in place, or move the album project and images together if using relative paths. Multi-page PDF composition can require memory depending on photo count and print resolution.
 
 ## 0.3.2 — Linux launcher fix
 
@@ -52,10 +74,10 @@ In v0.1.1, scanner discovery and scanning use an isolated SANE configuration in 
 
 ## Debian installation
 
-Download `giux-print-manager_0.3.2_all.deb` from [v0.3.2 releases](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.3.2), then:
+Download `giux-print-manager_0.4.0_all.deb` from [v0.4.0 releases](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.4.0), then:
 
 ```bash
-sudo apt install ./giux-print-manager_0.3.2_all.deb
+sudo apt install ./giux-print-manager_0.4.0_all.deb
 ```
 
 Required Debian packages are `python3`, `python3-gi`, `gir1.2-gtk-3.0`, `python3-pil`, `imagemagick-7.q16` (ImageMagick 7), `cups-client`, `sane-utils`, `sane-airscan`, `tesseract-ocr` and `xdg-utils`. The optional `xsane` package is recommended.
@@ -76,7 +98,7 @@ cd giux-print-manager
 ./build-deb.sh
 ```
 
-The repository builder writes `giux-print-manager_0.3.2_all.deb` in the checkout directory, installing `photo_editor.py` together with the OCR/image helpers under `/usr/share/giux-print-manager/`. Historical original source archives remain separately preserved.
+The repository builder writes `giux-print-manager_0.4.0_all.deb` in the checkout directory, installing `photo_editor.py` together with the OCR/image helpers under `/usr/share/giux-print-manager/`. Historical original source archives remain separately preserved.
 
 ## Current limitations
 
@@ -101,7 +123,7 @@ Source code is provided under **GNU GPL v3 or later (GPL-3.0-or-later)**; see [C
 
 **GiuxLab Print & Scan Manager** è un'applicazione sperimentale indipendente per **stampa, fotografie e scansioni** in ambiente Linux, realizzata in Python 3/GTK3.
 
-La versione disponibile è la **0.3.2**. L'interfaccia è in italiano e inglese, con selezione della lingua durante l'utilizzo.
+La versione disponibile è la **0.4.0**. L'interfaccia è in italiano e inglese, con selezione della lingua durante l'utilizzo.
 
 ### Regolazione fotografie in stampa — versione consolidata 0.3.1
 
@@ -119,10 +141,10 @@ Le modifiche sono non distruttive: l'immagine originale rimane intatta e l'outpu
 
 ### Installazione
 
-Scaricare [il pacchetto Debian 0.3.2](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.3.2):
+Scaricare [il pacchetto Debian 0.4.0](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.4.0):
 
 ```bash
-sudo apt install ./giux-print-manager_0.3.2_all.deb
+sudo apt install ./giux-print-manager_0.4.0_all.deb
 ```
 
 I profili attuali rappresentano **moduli dichiarativi di configurazione**, non un sistema completo di plugin eseguibili. Gli indirizzi IP contenuti nei profili sono esempi del sistema di sviluppo e devono essere adattati alla propria rete.

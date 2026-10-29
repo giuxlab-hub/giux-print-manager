@@ -50,3 +50,7 @@ The author's original 0.3.0 distribution is preserved byte-for-byte outside the 
 ## 0.3.2 installed-launcher correction
 
 The original author-provided source and historical archives remain unchanged. GitHub v0.3.1 contained an import-order regression introduced during the combined photo-editor/OCR integration: the `photo_editor` import preceded the installed helper-module path setup. v0.3.2 changes only the launcher initialization/order and the Debian package version, plus corresponding documentation and regression tests. The corrected v0.3.2 package is built separately without changing the installed framework, its CUPS/SANE configuration or older release artifacts.
+
+## Version 0.4.0 — author-evaluated Album Composer publication
+
+The original 0.4.0 .deb and source .tar.gz from the local evaluation are published without changes. The GitHub repository contains the same runnable Python and packaging source, with the README/CHANGELOG wording updated solely to reflect public release status. The archived source tarball therefore retains its original pre-publication text; this does not change the application or the Debian package. The author reports having tested the application for their intended use. This publication verifies package/source identity without making claims about any specific physical printer test.
