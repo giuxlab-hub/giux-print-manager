@@ -1,24 +1,27 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")"
-V=0.2.0
+V=0.3.1
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
-mkdir -p "$S/usr/lib/giux-print-manager" "$S/DEBIAN" "$S/usr/bin" "$S/usr/share/giux-print-manager/profiles" "$S/usr/share/applications" "$S/usr/share/doc/giux-print-manager" "$S/usr/share/icons/hicolor/scalable/apps"
+mkdir -p "$S/DEBIAN" "$S/usr/bin" "$S/usr/share/giux-print-manager/profiles" "$S/usr/share/applications" "$S/usr/share/doc/giux-print-manager" "$S/usr/share/icons/hicolor/scalable/apps"
 install -m 755 giux-print-manager "$S/usr/bin/giux-print-manager"
-install -m 644 photo_editor.py "$S/usr/lib/giux-print-manager/photo_editor.py"
+install -m 644 photo_editor.py "$S/usr/share/giux-print-manager/photo_editor.py"
+install -m 644 giux_ocr_workspace.py "$S/usr/share/giux-print-manager/giux_ocr_workspace.py"
+install -m 644 giux_image_canvas.py giux_image_filters.py "$S/usr/share/giux-print-manager/"
 install -m 644 profiles/*.json "$S/usr/share/giux-print-manager/profiles/"
 install -m 644 README.package.md "$S/usr/share/doc/giux-print-manager/README.md"
 install -m 644 COPYING "$S/usr/share/doc/giux-print-manager/COPYING"
 cat > "$S/DEBIAN/control" <<'CONTROL'
 Package: giux-print-manager
-Version: 0.2.0
+Version: 0.3.1
 Section: utils
 Priority: optional
 Architecture: all
 Maintainer: GiuxLab <noreply@giux-lab.it>
-Depends: python3, python3-gi, gir1.2-gtk-3.0, python3-pil, cups-client, sane-utils, sane-airscan, xdg-utils, imagemagick (>= 8:7)
+Depends: python3, python3-gi, gir1.2-gtk-3.0, python3-pil, cups-client, sane-utils, sane-airscan, xdg-utils, tesseract-ocr, imagemagick-7.q16
 Recommends: xsane
+Suggests: tesseract-ocr-all, tesseract-ocr-ita, tesseract-ocr-deu, tesseract-ocr-fra, tesseract-ocr-spa, tesseract-ocr-por, tesseract-ocr-chi-sim, tesseract-ocr-chi-tra, tesseract-ocr-jpn, tesseract-ocr-kor
 Description: Modular bilingual print, photo and scan GUI
  GTK3 front end for CUPS printing, photo layouts and SANE scanners.
  Includes extensible model profiles, Canon G600 and Brother DCP-L2665DW.

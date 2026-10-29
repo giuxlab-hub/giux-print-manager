@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 — Consolidated OCR workspace and photo-print editor
+
+- Based on the author's frozen original 0.3.0 source and release assets, preserving its scan Preview, OCR, searchable-PDF and acquired-image ImageMagick controls.
+- Integrated the independent photo-print canvas, rotation/reflection controls and non-destructive ImageMagick slider pipeline developed on the public 0.2.0 branch.
+- Preserved both independent workflows and the existing CUPS/SANE/profile authorities.
+- Updated Debian dependencies, installation packaging, bilingual documentation and merged automated test coverage.
+
 ## 0.2.0 — Interactive photo canvas and ImageMagick processing
 
 - Introduced a new `photo_editor.py` module for non-destructive photo transformations shared by preview and final printing.

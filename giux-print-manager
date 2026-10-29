@@ -1,16 +1,15 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 """GiuxLab Print Manager: GTK3 front end for CUPS, SANE and photo printing."""
-import os, re, json, subprocess, tempfile, threading
+import os, re, json, subprocess, tempfile, threading, sys
 from pathlib import Path
 import gi
 gi.require_version("Gtk","3.0")
-from gi.repository import Gtk, GLib, GdkPixbuf
+from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
 from PIL import Image
-import sys
-# Local source checkout and Debian-installed helper module share the same API.
-sys.path.append("/usr/lib/giux-print-manager")
 from photo_editor import PhotoEditor, render_print_page
+sys.path.insert(0, '/usr/share/giux-print-manager')
+from giux_ocr_workspace import OCRWorkspace
 
 PROFILES=Path("/usr/share/giux-print-manager/profiles")
 HOME_PROFILES=Path.home()/".config/giux-print-manager/profiles"
@@ -34,7 +33,12 @@ T={
 "wait":("Operazione in corso…","Working…"),"ready":("Pronto","Ready"),
 "edit-photo":("Elaborazione fotografica","Photo adjustments"),
 "preview-pending":("Attendere l’aggiornamento dell’anteprima prima della stampa.","Wait for the preview update before printing."),
-"pick-photo-first":("Selezionare prima una foto.","Choose a photo first.")
+"pick-photo-first":("Selezionare prima una foto.","Choose a photo first."),
+"openocr":("Apri immagine nell'editor OCR","Open image in OCR workspace"),
+"previewscan":("Anteprima (100 dpi)","Preview (100 dpi)"),
+"cleararea":("Cancella selezione","Clear selection"),
+"cropnote":("Trascina il mouse sull'anteprima per delimitare l'area. Solo Flatbed.","Drag over preview to select the region. Flatbed only."),
+"fullpage":("Nessuna selezione: scansione dell'intero piano.","No selection: full flatbed scan.")
 }
 def cmd(args,timeout=10):
     try:
@@ -58,6 +62,95 @@ def scanner_environment(profiles):
     (directory / "airscan.conf").write_text("\n".join(lines), encoding="utf-8")
     return {**os.environ, "SANE_CONFIG_DIR": str(directory)}
 
+class ScanPreview(Gtk.DrawingArea):
+    """Preview with mouse-drag rectangle in image-relative coordinates."""
+    def __init__(self):
+        super().__init__()
+        self.set_size_request(380, 290)
+        self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK |
+                        Gdk.EventMask.POINTER_MOTION_MASK)
+        self.connect("draw", self.paint)
+        self.connect("button-press-event", self.press)
+        self.connect("motion-notify-event", self.motion)
+        self.connect("button-release-event", self.release)
+        self.pixbuf = None
+        self.selection = None
+        self.start = None
+        self.dragging = False
+        self.geometry = (0, 0, 1, 1)
+
+    def load_image(self, path):
+        self.pixbuf = GdkPixbuf.Pixbuf.new_from_file(path)
+        self.selection = None
+        self.queue_draw()
+
+    def clear(self):
+        self.selection = None
+        self.queue_draw()
+
+    def image_coords(self, px, py):
+        x, y, width, height = self.geometry
+        return (max(0.0, min(1.0, (px-x)/width)),
+                max(0.0, min(1.0, (py-y)/height)))
+
+    def paint(self, widget, ctx):
+        allocation=self.get_allocation()
+        ctx.set_source_rgb(0.94, 0.94, 0.94)
+        ctx.paint()
+        if self.pixbuf is None:
+            return False
+        iw,ih=self.pixbuf.get_width(),self.pixbuf.get_height()
+        scale=min(allocation.width/iw,allocation.height/ih)
+        width,height=max(1,round(iw*scale)),max(1,round(ih*scale))
+        x=(allocation.width-width)/2
+        y=(allocation.height-height)/2
+        self.geometry=(x,y,width,height)
+        display=self.pixbuf.scale_simple(width,height,GdkPixbuf.InterpType.BILINEAR)
+        Gdk.cairo_set_source_pixbuf(ctx,display,x,y)
+        ctx.paint()
+        if self.selection:
+            a,b,c,d=self.selection
+            left=x+min(a,c)*width
+            top=y+min(b,d)*height
+            rw=abs(c-a)*width
+            rh=abs(d-b)*height
+            ctx.set_source_rgba(0.0,0.45,0.9,0.20)
+            ctx.rectangle(left,top,rw,rh)
+            ctx.fill_preserve()
+            ctx.set_source_rgba(0.0,0.30,0.85,1.0)
+            ctx.set_line_width(2)
+            ctx.stroke()
+        return False
+
+    def press(self, widget, event):
+        if event.button==1 and self.pixbuf is not None:
+            self.start=self.image_coords(event.x,event.y)
+            self.selection=(*self.start,*self.start)
+            self.dragging=True
+            self.queue_draw()
+        return True
+
+    def motion(self, widget, event):
+        if self.dragging and self.start:
+            self.selection=(*self.start,*self.image_coords(event.x,event.y))
+            self.queue_draw()
+        return True
+
+    def release(self, widget, event):
+        if self.dragging and event.button==1:
+            self.dragging=False
+            a,b=self.start
+            c,d=self.image_coords(event.x,event.y)
+            self.selection=(a,b,c,d) if abs(c-a)>0.01 and abs(d-b)>0.01 else None
+            self.queue_draw()
+        return True
+
+    def crop_fraction(self):
+        if not self.selection:
+            return None
+        a,b,c,d=self.selection
+        return min(a,c),min(b,d),abs(a-c),abs(b-d)
+
 def load_profiles():
     profiles=[]
     for folder in (PROFILES,HOME_PROFILES):
@@ -77,6 +170,7 @@ class Manager(Gtk.Window):
         self.lang=0 if os.environ.get("LANG","").lower().startswith("it") else 1
         self.profiles=load_profiles();self.scan_env=scanner_environment(self.profiles);self.image_path=None
         self.photo_editor=None
+        self.ocr_windows=[]
         self.root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);self.add(self.root)
         header=Gtk.Box(spacing=10)
         label=Gtk.Label(label="GiuxLab Print & Scan Manager",xalign=0)
@@ -274,8 +368,13 @@ class Manager(Gtk.Window):
         self.mode=self.row(box,"mode",self.combo([("Color","Color"),("Gray","Gray"),("Lineart","Lineart")]))
         self.source=self.row(box,"source",self.combo([("auto","Auto"),("Flatbed","Flatbed"),("ADF","ADF")]))
         self.dest=self.row(box,"destination",Gtk.Entry(text=str(Path.home()/"scan.png")))
+        self.scan_preview=ScanPreview()
+        box.pack_start(self.scan_preview,True,True,0)
+        box.pack_start(self.label("cropnote"),False,False,0)
         buttons=Gtk.Box(spacing=8)
-        for key,fn in (("detect",self.discover_scanners),("save",self.choose_dest),("acquire",self.scan),("xsane",self.xsane)):
+        self.button(buttons,"previewscan",self.scan_preview_start)
+        self.button(buttons,"cleararea",lambda *_:self.scan_preview.clear())
+        for key,fn in (("detect",self.discover_scanners),("save",self.choose_dest),("acquire",self.scan),("openocr",self.open_image_ocr),("xsane",self.xsane)):
             self.button(buttons,key,fn)
         box.pack_start(buttons,False,False,0)
         self.pages.append_page(box,self.label("scan"))
@@ -306,15 +405,109 @@ class Manager(Gtk.Window):
         d.set_do_overwrite_confirmation(True)
         if d.run()==Gtk.ResponseType.OK:self.dest.set_text(d.get_filename())
         d.destroy()
+    def open_image_ocr(self,*_):
+        chooser=Gtk.FileChooserDialog(title=self.tr("openocr"),transient_for=self,
+                                      action=Gtk.FileChooserAction.OPEN)
+        chooser.add_buttons(self.tr("cancel"),Gtk.ResponseType.CANCEL,
+                            self.tr("ok"),Gtk.ResponseType.OK)
+        flt=Gtk.FileFilter()
+        flt.set_name("Raster image")
+        for pat in ("*.png","*.jpg","*.jpeg","*.tif","*.tiff","*.PNG","*.JPG"):
+            flt.add_pattern(pat)
+        chooser.add_filter(flt)
+        path=chooser.get_filename() if chooser.run()==Gtk.ResponseType.OK else None
+        chooser.destroy()
+        if path:self.show_ocr(path)
+
+    def show_ocr(self,path):
+        try:
+            with Image.open(path) as img:img.verify()
+            window=OCRWorkspace(str(path),"it" if self.lang==0 else "en")
+            window.set_transient_for(self)
+            self.ocr_windows.append(window)
+            window.connect("destroy",lambda w:self.ocr_windows.remove(w) if w in self.ocr_windows else None)
+            window.show_all()
+        except Exception as e:self.dialog("error",str(e))
+
+    def scan_finished(self,result):
+        self.result(result)
+        if result[0]:
+            self.show_ocr(result[1])
+        return False
+
+    def scanner_device(self):
+        return self.scanner.get_active_id() or self.scanner.get_child().get_text().strip()
+
+    def scan_preview_start(self,*_):
+        dev=self.scanner_device()
+        if not dev:
+            self.dialog("error","Discover and select scanner first")
+            return
+        # Preview always uses the glass, where geometry has a defined origin.
+        self.scan_preview.clear()
+        def work():
+            with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as f:
+                path=Path(f.name)
+            args=["scanimage","-d",dev,"--resolution","100","--mode","Color",
+                  "--source","Flatbed","--format=png","--scan-intent=Preview"]
+            try:
+                with path.open("wb") as output:
+                    r=subprocess.run(args,env=self.scan_env,stdout=output,
+                                     stderr=subprocess.PIPE,timeout=120)
+                if r.returncode:
+                    return False,r.stderr.decode(errors="replace")[:800]
+                with Image.open(path) as img:
+                    img.verify()
+                return True,str(path)
+            except Exception as e:
+                return False,str(e)
+            finally:
+                # Success is decoded by the UI before removing the temporary file.
+                if not path.stat().st_size:
+                    path.unlink(missing_ok=True)
+        self.background(work,self.preview_loaded)
+
+    def preview_loaded(self,result):
+        good,path=result
+        if not good:
+            return self.result(result)
+        try:
+            self.scan_preview.load_image(path)
+            self.notice.set_text("Preview: drag to select a crop area")
+        except Exception as exc:
+            self.dialog("error",exc)
+        finally:
+            Path(path).unlink(missing_ok=True)
+        return False
+
     def scan(self,*_):
-        dev=self.scanner.get_active_id() or self.scanner.get_child().get_text().strip()
+        dev=self.scanner_device()
         if not dev:self.dialog("error","Discover and select scanner first");return
         target=Path(self.dest.get_text()).expanduser()
         if target.suffix.lower() not in (".png",".jpg",".jpeg",".tif",".tiff") or not target.parent.is_dir():
             self.dialog("error","Choose an existing directory and a .png/.jpg/.tiff filename");return
         if not self.dialog("confirm",str(target),True):return
         args=["scanimage","-d",dev,"--resolution",self.dpi.get_active_id(),"--mode",self.mode.get_active_id(),"--format=png"]
-        if self.source.get_active_id()!="auto":args+=["--source",self.source.get_active_id()]
+        source=self.source.get_active_id()
+        crop=self.scan_preview.crop_fraction()
+        if source!="auto":
+            args+=["--source",source]
+        if crop and source=="ADF":
+            self.dialog("error","Region selection is supported for Flatbed, not ADF.")
+            return
+        if crop:
+            # Both supported flatbeds have ~215.9 x 297 mm geometry.
+            # Use actual known bounds of the supported devices, with a safety margin.
+            width_mm=215.9
+            height_mm=296.9 if "brother" in dev.casefold() else 297.0
+            a,b,w,h=crop
+            x=a*width_mm; y=b*height_mm
+            sw=min(w*width_mm,width_mm-x)
+            sh=min(h*height_mm,height_mm-y)
+            if sw<2 or sh<2:
+                self.dialog("error","Selected area is too small.")
+                return
+            args+=["-l",f"{x:.2f}","-t",f"{y:.2f}","-x",f"{sw:.2f}","-y",f"{sh:.2f}"]
         def work():
             with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as f:temp=Path(f.name)
             try:
@@ -324,7 +517,7 @@ class Manager(Gtk.Window):
                 with Image.open(temp) as im:im.save(target)
                 return True,str(target)
             finally:temp.unlink(missing_ok=True)
-        self.background(work,self.result)
+        self.background(work,self.scan_finished)
     def xsane(self,*_):
         try:subprocess.Popen(["xsane"])
         except OSError as e:self.dialog("error",e)

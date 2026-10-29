@@ -2,13 +2,25 @@
 
 **Experimental, modular GTK3 desktop application for Linux printing, photo layouts and SANE scanning.**
 
-**Latest version:** 0.2.0 · **Languages:** Italian and English · **License:** GPL-3.0-or-later · **Platform:** Debian/Linux
+**Latest version:** 0.3.1 · **Languages:** Italian and English · **License:** GPL-3.0-or-later · **Platform:** Debian/Linux
 
 [Download Debian package and original source](https://github.com/giuxlab-hub/giux-print-manager/releases/latest) · [Giux-Lab](https://giux-lab.it/) · [Original README](README.original.md)
 
 GiuxLab Print & Scan Manager integrates three distinct workflows into one desktop interface: CUPS printer queues, photo printing, and SANE scanner acquisition. Printer-model extensions are currently **declarative JSON profiles**, not independent executable plugins. The architecture is an early-stage project and is published as such.
 
-## New in 0.2.0 — photo editing with sliders
+## 0.3.1 — Combined photo printing and acquired-image OCR
+
+**Version 0.3.1 combines two independently developed features:** the author's original 0.3.0 acquired-image OCR/retouching workspace, and the interactive photo-print editor released separately through GitHub.
+
+- **Photo printing:** rotation, flips, contrast/brightness/saturation/sharpening/blur, grayscale/sepia/auto-level filters and slider-only controls in a pan/zoom canvas, with the full-resolution print using the same processing sequence.
+- **Acquired-image workspace:** retains the original 0.3.0 scanner Preview/crop selection, Tesseract OCR (with installed language discovery), editable text, selection/full-image export, searchable PDF, zoom/pan, handles and ImageMagick filters.
+- **Printing and scanning:** retains the CUPS/SANE/eSCL services, printer JSON profiles and device authorities. Neither workspace overwrites the original source image.
+
+**Dependencies:** Python 3, GTK3, Pillow, CUPS, SANE, `sane-airscan`, `tesseract-ocr` and `imagemagick-7.q16` on Debian 13. Additional OCR language models are optional. See [the author's original 0.3.0 guide](README.author-v0.3.0.md) for the acquired-image OCR interface and [the photo guide](README.package.md) for the print editor.
+
+**Scope:** Experimental software. The two editors are separate workflows and do not automatically share editing sessions. No physical printer or scanner operation is claimed by this merge.
+
+## Photo-print editor — adjustments with sliders
 
 The photo workspace now includes an interactive **pan/zoom canvas**, 90° rotation buttons, a fine-angle slider, horizontal and vertical reflections and an **ImageMagick 7** adjustments panel. Brightness, contrast, saturation, sharpening and blur are controlled with **sliders only**, without numerical input fields. Filters include **Grayscale, Sepia and Auto levels**. A reset control restores the original appearance.
 
@@ -36,13 +48,13 @@ In v0.1.1, scanner discovery and scanning use an isolated SANE configuration in 
 
 ## Debian installation
 
-Download `giux-print-manager_0.2.0_all.deb` from [v0.2.0 releases](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.2.0), then:
+Download `giux-print-manager_0.3.1_all.deb` from [v0.3.1 releases](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.3.1), then:
 
 ```bash
-sudo apt install ./giux-print-manager_0.2.0_all.deb
+sudo apt install ./giux-print-manager_0.3.1_all.deb
 ```
 
-Required Debian packages are `python3`, `python3-gi`, `gir1.2-gtk-3.0`, `python3-pil`, `imagemagick` (ImageMagick 7), `cups-client`, `sane-utils`, `sane-airscan` and `xdg-utils`. The optional `xsane` package is recommended.
+Required Debian packages are `python3`, `python3-gi`, `gir1.2-gtk-3.0`, `python3-pil`, `imagemagick-7.q16` (ImageMagick 7), `cups-client`, `sane-utils`, `sane-airscan`, `tesseract-ocr` and `xdg-utils`. The optional `xsane` package is recommended.
 
 Start the application through the desktop applications menu or:
 
@@ -60,13 +72,13 @@ cd giux-print-manager
 ./build-deb.sh
 ```
 
-The repository builder writes `giux-print-manager_0.2.0_all.deb` in the checkout directory, installing the new `photo_editor.py` helper under `/usr/lib/giux-print-manager/`. The original 0.1.1 sources and archives are preserved independently.
+The repository builder writes `giux-print-manager_0.3.1_all.deb` in the checkout directory, installing `photo_editor.py` together with the OCR/image helpers under `/usr/share/giux-print-manager/`. Historical original source archives remain separately preserved.
 
 ## Current limitations
 
 This is an **experimental** desktop application, not a finished general-purpose print/scan platform.
 
-- No borderless printing, ICC color-management workflow, PDF export, multi-page ADF orchestration, or integrated scan preview/crop editor.
+- No borderless printing, ICC color-management workflow or multi-page ADF orchestration. The OCR workspace now supports scanner preview/crop and searchable PDF, with limitations documented separately.
 - The effective behavior of CUPS media, page and quality options depends on the installed printer driver.
 - Network scanner discovery can be slow, unavailable, or dependent on correct local eSCL/SANE configuration.
 - Canon maintenance and Brother toner/device management are delegated to their official web interfaces; the software does not execute undocumented maintenance commands.
@@ -75,7 +87,7 @@ This is an **experimental** desktop application, not a finished general-purpose 
 
 ## Source, history and license
 
-Versions **0.1.0** and **0.1.1** remain available with their original Debian/source archives and SHA-256 checksums. Version **0.2.0** adds ImageMagick-based photo editing and an interactive zoom/pan canvas while preserving the CUPS and SANE authorities.
+Versions **0.1.0** and **0.1.1** remain available with their original Debian/source archives and SHA-256 checksums. GitHub version **0.2.0** added ImageMagick-based photo-print editing. The author independently advanced scanning/OCR through version **0.3.0**; version **0.3.1** combines both features.
 
 Source code is provided under **GNU GPL v3 or later (GPL-3.0-or-later)**; see [COPYING](COPYING). Canon and Brother names are used to identify compatible printers; this project is **not affiliated** with their manufacturers.
 
@@ -85,9 +97,9 @@ Source code is provided under **GNU GPL v3 or later (GPL-3.0-or-later)**; see [C
 
 **GiuxLab Print & Scan Manager** è un'applicazione sperimentale indipendente per **stampa, fotografie e scansioni** in ambiente Linux, realizzata in Python 3/GTK3.
 
-La versione disponibile è la **0.2.0**. L'interfaccia è in italiano e inglese, con selezione della lingua durante l'utilizzo.
+La versione disponibile è la **0.3.1**. L'interfaccia è in italiano e inglese, con selezione della lingua durante l'utilizzo.
 
-### Novità della 0.2.0: regolazione delle immagini
+### Regolazione fotografie in stampa — versione consolidata 0.3.1
 
 La pagina fotografica comprende **canvas navigabile con pan trascinando e zoom con la rotella**, rotazione a passi di 90°, inclinazione fine, riflessione orizzontale/verticale e regolazioni ImageMagick di **luminosità, contrasto, saturazione, nitidezza e sfocatura**. I parametri si impostano soltanto con **cursori**, senza caselle numeriche. Sono disponibili filtri bianco e nero, seppia e livelli automatici.
 
@@ -103,17 +115,17 @@ Le modifiche sono non distruttive: l'immagine originale rimane intatta e l'outpu
 
 ### Installazione
 
-Scaricare [il pacchetto Debian 0.2.0](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.2.0):
+Scaricare [il pacchetto Debian 0.3.1](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.3.1):
 
 ```bash
-sudo apt install ./giux-print-manager_0.2.0_all.deb
+sudo apt install ./giux-print-manager_0.3.1_all.deb
 ```
 
 I profili attuali rappresentano **moduli dichiarativi di configurazione**, non un sistema completo di plugin eseguibili. Gli indirizzi IP contenuti nei profili sono esempi del sistema di sviluppo e devono essere adattati alla propria rete.
 
 ### Funzioni ancora da sviluppare
 
-Non sono ancora presenti stampa senza bordi, gestione ICC, esportazione PDF, orchestrazione multipagina dell'ADF e un'interfaccia completa di anteprima/ritaglio dello scanner. Per stampanti laser utilizzare esclusivamente supporti compatibili con la stampa laser.
+Non sono ancora presenti stampa senza bordi, gestione ICC e orchestrazione multipagina dell'ADF. L'interfaccia OCR acquisita dalla versione 0.3.0 include invece anteprima/ritaglio e PDF ricercabile. Per stampanti laser utilizzare esclusivamente supporti compatibili con la stampa laser.
 
 **Licenza:** GNU GPL-3.0-or-later. Progetto Giux-Lab indipendente, non affiliato a Canon o Brother.
 
