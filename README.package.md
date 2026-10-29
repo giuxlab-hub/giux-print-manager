@@ -1,4 +1,4 @@
-# GiuxLab Print & Scan Manager 0.3.1
+# GiuxLab Print & Scan Manager 0.3.2
 
 GTK3 desktop manager for Linux printing, photo editing/printing and SANE scanning.
 
@@ -27,10 +27,10 @@ The device profile system remains experimental: current modules are declarative 
 
 ## Install
 
-Install the packaged `giux-print-manager_0.3.1_all.deb` with:
+Install the packaged `giux-print-manager_0.3.2_all.deb` with:
 
 ```bash
-sudo apt install ./giux-print-manager_0.3.1_all.deb
+sudo apt install ./giux-print-manager_0.3.2_all.deb
 ```
 
 The package requires Python 3, GTK3 PyGObject, Pillow, CUPS tools, SANE tools, `sane-airscan`, `xdg-utils` and **ImageMagick 7**. XSane is optional.
@@ -55,4 +55,8 @@ La selezione della lingua italiano/inglese conserva la fotografia e le regolazio
 
 ## OCR and acquired-image workspace
 
-Version 0.3.1 also integrates the author's separate scanner-image editor from 0.3.0: rectangular capture/resize handles, zoom/pan, Tesseract text OCR, configurable language/PSM, original-image/region export and searchable PDF. This independent workspace has its own ImageMagick sliders and is opened from scanning or the Scan tab. See `README.author-v0.3.0.md`.
+Version 0.3.2 also integrates the author's separate scanner-image editor from 0.3.0: rectangular capture/resize handles, zoom/pan, Tesseract text OCR, configurable language/PSM, original-image/region export and searchable PDF. This independent workspace has its own ImageMagick sliders and is opened from scanning or the Scan tab. See `README.author-v0.3.0.md`.
+
+## 0.3.2 startup correction
+
+The launcher now resolves the installed helper-module directory before importing the photo editor and OCR workspace. This corrects the failure to open the v0.3.1 Debian package from the Linux desktop menu.

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")"
-V=0.3.1
+V=0.3.2
 S=$(mktemp -d)
 trap 'rm -rf "$S"' EXIT
 mkdir -p "$S/DEBIAN" "$S/usr/bin" "$S/usr/share/giux-print-manager/profiles" "$S/usr/share/applications" "$S/usr/share/doc/giux-print-manager" "$S/usr/share/icons/hicolor/scalable/apps"
@@ -14,7 +14,7 @@ install -m 644 README.package.md "$S/usr/share/doc/giux-print-manager/README.md"
 install -m 644 COPYING "$S/usr/share/doc/giux-print-manager/COPYING"
 cat > "$S/DEBIAN/control" <<'CONTROL'
 Package: giux-print-manager
-Version: 0.3.1
+Version: 0.3.2
 Section: utils
 Priority: optional
 Architecture: all

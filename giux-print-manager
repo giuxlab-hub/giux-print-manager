@@ -7,8 +7,13 @@ import gi
 gi.require_version("Gtk","3.0")
 from gi.repository import Gtk, GLib, GdkPixbuf, Gdk
 from PIL import Image
+# Resolve companion modules from the actual installation prefix; in a source
+# checkout they live alongside the launcher. This must precede both imports.
+MODULE_DIRECTORY = Path(__file__).resolve().parent.parent / 'share' / 'giux-print-manager'
+if not MODULE_DIRECTORY.is_dir():
+    MODULE_DIRECTORY = Path(__file__).resolve().parent
+sys.path.insert(0, str(MODULE_DIRECTORY))
 from photo_editor import PhotoEditor, render_print_page
-sys.path.insert(0, '/usr/share/giux-print-manager')
 from giux_ocr_workspace import OCRWorkspace
 
 PROFILES=Path("/usr/share/giux-print-manager/profiles")

@@ -2,11 +2,15 @@
 
 **Experimental, modular GTK3 desktop application for Linux printing, photo layouts and SANE scanning.**
 
-**Latest version:** 0.3.1 · **Languages:** Italian and English · **License:** GPL-3.0-or-later · **Platform:** Debian/Linux
+**Latest version:** 0.3.2 · **Languages:** Italian and English · **License:** GPL-3.0-or-later · **Platform:** Debian/Linux
 
 [Download Debian package and original source](https://github.com/giuxlab-hub/giux-print-manager/releases/latest) · [Giux-Lab](https://giux-lab.it/) · [Original README](README.original.md)
 
 GiuxLab Print & Scan Manager integrates three distinct workflows into one desktop interface: CUPS printer queues, photo printing, and SANE scanner acquisition. Printer-model extensions are currently **declarative JSON profiles**, not independent executable plugins. The architecture is an early-stage project and is published as such.
+
+## 0.3.2 — Linux launcher fix
+
+Fixes an import-order regression in the previous 0.3.1 Debian package: the launcher imported `photo_editor` before adding the installed modules directory to the Python import path. The executable now resolves its actual installation location and loads the companion modules before importing them. This correction preserves the photo-print editor, the acquired-image OCR workspace, CUPS/SANE routines and all existing profiles. Existing 0.3.1 packages remain archived.
 
 ## 0.3.1 — Combined photo printing and acquired-image OCR
 
@@ -48,10 +52,10 @@ In v0.1.1, scanner discovery and scanning use an isolated SANE configuration in 
 
 ## Debian installation
 
-Download `giux-print-manager_0.3.1_all.deb` from [v0.3.1 releases](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.3.1), then:
+Download `giux-print-manager_0.3.2_all.deb` from [v0.3.2 releases](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.3.2), then:
 
 ```bash
-sudo apt install ./giux-print-manager_0.3.1_all.deb
+sudo apt install ./giux-print-manager_0.3.2_all.deb
 ```
 
 Required Debian packages are `python3`, `python3-gi`, `gir1.2-gtk-3.0`, `python3-pil`, `imagemagick-7.q16` (ImageMagick 7), `cups-client`, `sane-utils`, `sane-airscan`, `tesseract-ocr` and `xdg-utils`. The optional `xsane` package is recommended.
@@ -72,7 +76,7 @@ cd giux-print-manager
 ./build-deb.sh
 ```
 
-The repository builder writes `giux-print-manager_0.3.1_all.deb` in the checkout directory, installing `photo_editor.py` together with the OCR/image helpers under `/usr/share/giux-print-manager/`. Historical original source archives remain separately preserved.
+The repository builder writes `giux-print-manager_0.3.2_all.deb` in the checkout directory, installing `photo_editor.py` together with the OCR/image helpers under `/usr/share/giux-print-manager/`. Historical original source archives remain separately preserved.
 
 ## Current limitations
 
@@ -97,7 +101,7 @@ Source code is provided under **GNU GPL v3 or later (GPL-3.0-or-later)**; see [C
 
 **GiuxLab Print & Scan Manager** è un'applicazione sperimentale indipendente per **stampa, fotografie e scansioni** in ambiente Linux, realizzata in Python 3/GTK3.
 
-La versione disponibile è la **0.3.1**. L'interfaccia è in italiano e inglese, con selezione della lingua durante l'utilizzo.
+La versione disponibile è la **0.3.2**. L'interfaccia è in italiano e inglese, con selezione della lingua durante l'utilizzo.
 
 ### Regolazione fotografie in stampa — versione consolidata 0.3.1
 
@@ -115,10 +119,10 @@ Le modifiche sono non distruttive: l'immagine originale rimane intatta e l'outpu
 
 ### Installazione
 
-Scaricare [il pacchetto Debian 0.3.1](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.3.1):
+Scaricare [il pacchetto Debian 0.3.2](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.3.2):
 
 ```bash
-sudo apt install ./giux-print-manager_0.3.1_all.deb
+sudo apt install ./giux-print-manager_0.3.2_all.deb
 ```
 
 I profili attuali rappresentano **moduli dichiarativi di configurazione**, non un sistema completo di plugin eseguibili. Gli indirizzi IP contenuti nei profili sono esempi del sistema di sviluppo e devono essere adattati alla propria rete.

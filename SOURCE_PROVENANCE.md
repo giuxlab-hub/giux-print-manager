@@ -46,3 +46,7 @@ Unlike 0.1.0/0.1.1, the 0.2.0 Debian package is generated from the published rep
 ## 0.3.1 merge from author 0.3.0
 
 The author's original 0.3.0 distribution is preserved byte-for-byte outside the workspace: source tarball SHA-256 `422836e7fdfe96a93366e6eec26f994052fa67a2104b50e0217e36a161dadaec` and Debian package SHA-256 `a444cfc5bc04489b0c856299ba83a069ec7d903e59bcca9683d54977d10e824a`. It independently introduced the acquired-image OCR and ImageMagick editing workflow. The 0.3.1 release integrates that frozen source with the print-photo editor from this GitHub repo, without replacing earlier release archives. The original author README is preserved as `README.author-v0.3.0.md`; scripts used for the original build remain in the author tarball.
+
+## 0.3.2 installed-launcher correction
+
+The original author-provided source and historical archives remain unchanged. GitHub v0.3.1 contained an import-order regression introduced during the combined photo-editor/OCR integration: the `photo_editor` import preceded the installed helper-module path setup. v0.3.2 changes only the launcher initialization/order and the Debian package version, plus corresponding documentation and regression tests. The corrected v0.3.2 package is built separately without changing the installed framework, its CUPS/SANE configuration or older release artifacts.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2 — Launch fix
+
+- Fix the startup import-order regression in the v0.3.1 Debian package: installed `photo_editor.py` and OCR helpers are resolved before imports.
+- Resolve the relative Debian installation prefix while retaining source-checkout execution.
+- Add a regression test that executes the actual launcher from an isolated extracted Debian package, without altering the installed application or submitting print/scan jobs.
+- No changes to the photo editor's filters, the OCR workspace, CUPS/SANE behavior or printer profiles.
+
 ## 0.3.1 — Consolidated OCR workspace and photo-print editor
 
 - Based on the author's frozen original 0.3.0 source and release assets, preserving its scan Preview, OCR, searchable-PDF and acquired-image ImageMagick controls.
