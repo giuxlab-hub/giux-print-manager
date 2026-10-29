@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.deb
+*.tar.gz
+.pytest_cache/
+.venv/
+.vscode/
+.idea/
+*~
+.DS_Store

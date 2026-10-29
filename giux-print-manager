@@ -1,0 +1,269 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""GiuxLab Print Manager: GTK3 front end for CUPS, SANE and photo printing."""
+import os, re, json, subprocess, tempfile, threading
+from pathlib import Path
+import gi
+gi.require_version("Gtk","3.0")
+from gi.repository import Gtk, GLib, GdkPixbuf
+from PIL import Image, ImageOps
+
+PROFILES=Path("/usr/share/giux-print-manager/profiles")
+HOME_PROFILES=Path.home()/".config/giux-print-manager/profiles"
+T={
+"printers":("Stampanti","Printers"),"photo":("Fotografie","Photos"),"scan":("Scanner","Scanner"),
+"modules":("Moduli","Modules"),"printer":("Stampante","Printer"),"refresh":("Aggiorna","Refresh"),
+"status":("Stato CUPS","CUPS status"),"web":("Pannello web","Web management"),"settings":("Opzioni CUPS","CUPS settings"),
+"choose":("Seleziona foto","Choose photo"),"size":("Formato carta","Paper size"),"media":("Tipo carta","Paper type"),
+"quality":("Qualità","Quality"),"layout":("Adattamento","Layout"),"fit":("Adatta senza ritagliare","Fit without cropping"),
+"fill":("Riempi ritagliando","Fill and crop"),"print":("Stampa foto","Print photo"),
+"device":("Dispositivo SANE","SANE device"),"detect":("Rileva scanner","Discover scanners"),
+"dpi":("Risoluzione","Resolution"),"mode":("Modalità","Mode"),"source":("Origine","Source"),
+"destination":("Destinazione","Destination"),"save":("Scegli file","Choose file"),
+"acquire":("Acquisisci","Scan"),"xsane":("Avvia XSane","Launch XSane"),
+"confirm":("Conferma operazione","Confirm operation"),"error":("Errore","Error"),
+"cancel":("Annulla","Cancel"),"ok":("Conferma","Confirm"),
+"single":("Normale","Plain"),"photo-paper":("Fotografica","Photo"),
+"note":("Nessun driver o configurazione CUPS viene modificato.","No CUPS driver or configuration is modified."),
+"paper-note":("Caricare il supporto corrispondente. Margine di 3 mm: non è stampa senza bordi.","Load matching paper. 3 mm margin: this is not borderless printing."),
+"module-note":("I nuovi modelli si aggiungono con profili JSON nella cartella ~/.config/giux-print-manager/profiles","Add models using JSON profiles in ~/.config/giux-print-manager/profiles"),
+"wait":("Operazione in corso…","Working…"),"ready":("Pronto","Ready")
+}
+def cmd(args,timeout=10):
+    try:
+        p=subprocess.run(args,capture_output=True,text=True,timeout=timeout)
+        return (p.returncode==0,(p.stdout+p.stderr).strip())
+    except (OSError,subprocess.TimeoutExpired) as e:return (False,str(e))
+def load_profiles():
+    profiles=[]
+    for folder in (PROFILES,HOME_PROFILES):
+        if folder.is_dir():
+            for f in sorted(folder.glob("*.json")):
+                try:
+                    p=json.loads(f.read_text(encoding="utf-8"))
+                    assert isinstance(p["match"],str) and isinstance(p["photo_media"],list)
+                    profiles.append(p)
+                except (KeyError,ValueError,AssertionError,OSError):pass
+    return profiles
+class Manager(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="GiuxLab Print & Scan Manager")
+        self.set_default_size(810,650);self.set_border_width(12)
+        self.connect("destroy",Gtk.main_quit)
+        self.lang=0 if os.environ.get("LANG","").lower().startswith("it") else 1
+        self.profiles=load_profiles();self.image_path=None
+        self.root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);self.add(self.root)
+        header=Gtk.Box(spacing=10)
+        label=Gtk.Label(label="GiuxLab Print & Scan Manager",xalign=0)
+        header.pack_start(label,True,True,0)
+        self.language=Gtk.ComboBoxText()
+        for x in ("Italiano","English"):self.language.append_text(x)
+        self.language.set_active(self.lang);self.language.connect("changed",self.change_language)
+        header.pack_start(self.language,False,False,0);self.root.pack_start(header,False,False,0)
+        self.pages=Gtk.Notebook();self.root.pack_start(self.pages,True,True,0)
+        self.notice=Gtk.Label(xalign=0);self.root.pack_start(self.notice,False,False,0)
+        self.build()
+    def tr(self,key):return T.get(key,(key,key))[self.lang]
+    def label(self,key):return Gtk.Label(label=self.tr(key),xalign=0)
+    def row(self,box,key,widget):
+        r=Gtk.Box(spacing=12);lab=self.label(key);lab.set_size_request(150,-1)
+        r.pack_start(lab,False,False,0);r.pack_start(widget,True,True,0)
+        box.pack_start(r,False,False,0);return widget
+    def combo(self,options):
+        w=Gtk.ComboBoxText()
+        for code,name in options:w.append(str(code),name)
+        if options:w.set_active(0)
+        return w
+    def button(self,box,key,fn):
+        b=Gtk.Button(label=self.tr(key));b.connect("clicked",fn);box.pack_start(b,False,False,0)
+    def dialog(self,key,msg,question=False):
+        d=Gtk.MessageDialog(transient_for=self,flags=0,message_type=Gtk.MessageType.QUESTION if question else Gtk.MessageType.INFO,buttons=Gtk.ButtonsType.OK_CANCEL if question else Gtk.ButtonsType.OK,text=self.tr(key))
+        d.format_secondary_text(str(msg));r=d.run();d.destroy()
+        return r==Gtk.ResponseType.OK
+    def background(self,work,done):
+        self.notice.set_text(self.tr("wait"))
+        def task():
+            try:r=work()
+            except Exception as e:r=(False,str(e))
+            GLib.idle_add(done,r)
+        threading.Thread(target=task,daemon=True).start()
+    def result(self,r):
+        ok,msg=r;self.notice.set_text(str(msg)[:300])
+        if not ok:self.dialog("error",msg)
+        return False
+    def build(self):
+        while self.pages.get_n_pages():self.pages.remove_page(0)
+        self.build_printers();self.build_photo();self.build_scanner();self.build_modules()
+        self.notice.set_text(self.tr("ready"));self.show_all()
+        self.refresh()
+    def change_language(self,w):
+        i=w.get_active()
+        if i!=self.lang and i>=0:self.lang=i;self.build()
+    def profile(self,name):
+        for p in reversed(self.profiles):
+            if p["match"].casefold() in name.casefold():return p
+        return {}
+    def selected(self,widget):
+        q=widget.get_active_id()
+        if not q:raise ValueError("No CUPS printer selected")
+        return q
+    def refresh(self,*_):
+        self.background(lambda:cmd(["lpstat","-e"],8),self.refreshed)
+    def refreshed(self,r):
+        good,out=r
+        if not good:return self.result(r)
+        names=[n.strip() for n in out.splitlines() if n.strip() and " " not in n]
+        old=(self.printer.get_active_id(),self.photo_printer.get_active_id())
+        for w in (self.printer,self.photo_printer):
+            w.remove_all()
+            for n in names:w.append(n,n)
+        if names:
+            self.printer.set_active_id(old[0] if old[0] in names else names[0])
+            self.photo_printer.set_active_id(old[1] if old[1] in names else next((n for n in names if "canon" in n.lower()),names[0]))
+        self.notice.set_text(str(len(names))+" CUPS printer(s)")
+        return False
+    def open_url(self,url):
+        subprocess.Popen(["xdg-open",url],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    def web(self,*_):
+        try:
+            p=self.profile(self.selected(self.printer))
+            if not p.get("web_url"):raise ValueError("No matching web profile")
+            self.open_url(p["web_url"])
+        except Exception as e:self.dialog("error",e)
+    def status(self,*_):
+        try:q=self.selected(self.printer)
+        except Exception as e:self.dialog("error",e);return
+        self.background(lambda:cmd(["lpstat","-p",q,"-l"]),self.result)
+    def build_printers(self):
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10,margin=12)
+        self.printer=self.row(box,"printer",Gtk.ComboBoxText())
+        tools=Gtk.Box(spacing=8)
+        for name,fn in (("refresh",self.refresh),("status",self.status),("web",self.web),("settings",lambda *_:self.open_url("http://localhost:631/printers/"))):
+            self.button(tools,name,fn)
+        box.pack_start(tools,False,False,0)
+        box.pack_start(self.label("note"),False,False,0)
+        self.pages.append_page(box,self.label("printers"))
+    def build_photo(self):
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8,margin=12)
+        self.photo_printer=self.row(box,"printer",Gtk.ComboBoxText())
+        self.button(box,"choose",self.pick_photo)
+        self.preview=Gtk.Image();self.preview.set_size_request(300,190)
+        box.pack_start(self.preview,True,True,0)
+        self.size=self.row(box,"size",self.combo([("A4","A4"),("4x6","10×15 (4×6)"),("5x7","13×18 (5×7)"),("A5","A5")]))
+        self.media=self.row(box,"media",Gtk.ComboBoxText())
+        self.quality=self.row(box,"quality",self.combo([(q,q) for q in ("Draft","Normal","High")]))
+        self.layout=self.row(box,"layout",self.combo([("fit",self.tr("fit")),("fill",self.tr("fill"))]))
+        self.button(box,"print",self.print_photo)
+        box.pack_start(self.label("paper-note"),False,False,0)
+        self.photo_printer.connect("changed",self.update_media)
+        self.pages.append_page(box,self.label("photo"))
+    def update_media(self,*_):
+        self.media.remove_all()
+        name=self.photo_printer.get_active_id() or ""
+        types=self.profile(name).get("photo_media",[])
+        if not types:types=[{"key":"Stationery","label":"Plain"},{"key":"Photographic","label":"Photographic"}]
+        for v in types:self.media.append(v["key"],v["label"])
+        self.media.set_active(0)
+    def pick_photo(self,*_):
+        d=Gtk.FileChooserDialog(title=self.tr("choose"),transient_for=self,action=Gtk.FileChooserAction.OPEN)
+        d.add_buttons(self.tr("cancel"),Gtk.ResponseType.CANCEL,self.tr("ok"),Gtk.ResponseType.OK)
+        f=Gtk.FileFilter();f.set_name("JPEG / PNG / TIFF")
+        for pattern in ("*.jpg","*.jpeg","*.png","*.tif","*.tiff"):f.add_pattern(pattern)
+        d.add_filter(f)
+        if d.run()==Gtk.ResponseType.OK:
+            self.image_path=d.get_filename()
+            try:self.preview.set_from_pixbuf(GdkPixbuf.Pixbuf.new_from_file_at_scale(self.image_path,350,210,True))
+            except Exception as e:self.dialog("error",e)
+        d.destroy()
+    def print_photo(self,*_):
+        if not self.image_path:self.dialog("error","Choose photo first");return
+        try:
+            q=self.selected(self.photo_printer)
+            size=self.size.get_active_id();media=self.media.get_active_id()
+            quality=self.quality.get_active_id();layout=self.layout.get_active_id()
+        except Exception as e:self.dialog("error",e);return
+        if not self.dialog("confirm",f"{q}\n{self.image_path}\n{size} / {media} / {quality}",True):return
+        path=self.image_path
+        def work():
+            dimensions={"A4":(210,297),"A5":(148,210),"4x6":(101.6,152.4),"5x7":(127,177.8)}
+            width,height=dimensions[size]
+            W,H=round(width*300/25.4),round(height*300/25.4)
+            with Image.open(path) as raw:
+                im=ImageOps.exif_transpose(raw).convert("RGB")
+                if (im.width>im.height)!=(W>H):W,H=H,W
+                margin=round(3*300/25.4);frame=(W-2*margin,H-2*margin)
+                if layout=="fill":im=ImageOps.fit(im,frame,method=Image.Resampling.LANCZOS)
+                else:im.thumbnail(frame,Image.Resampling.LANCZOS)
+                page=Image.new("RGB",(W,H),"white")
+                page.paste(im,((W-im.width)//2,(H-im.height)//2))
+            with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as f:tmp=f.name
+            try:
+                page.save(tmp)
+                return cmd(["lp","-d",q,"-o","PageSize="+size,"-o","MediaType="+media,"-o","cupsPrintQuality="+quality,"-o","print-scaling=none",tmp],25)
+            finally:os.unlink(tmp)
+        self.background(work,self.result)
+    def build_scanner(self):
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10,margin=12)
+        self.scanner=self.row(box,"device",Gtk.ComboBoxText.new_with_entry())
+        self.dpi=self.row(box,"dpi",self.combo([(str(n),str(n)) for n in (150,300,600)]))
+        self.mode=self.row(box,"mode",self.combo([("Color","Color"),("Gray","Gray"),("Lineart","Lineart")]))
+        self.source=self.row(box,"source",self.combo([("auto","Auto"),("Flatbed","Flatbed"),("ADF","ADF")]))
+        self.dest=self.row(box,"destination",Gtk.Entry(text=str(Path.home()/"scan.png")))
+        buttons=Gtk.Box(spacing=8)
+        for key,fn in (("detect",self.discover_scanners),("save",self.choose_dest),("acquire",self.scan),("xsane",self.xsane)):
+            self.button(buttons,key,fn)
+        box.pack_start(buttons,False,False,0)
+        self.pages.append_page(box,self.label("scan"))
+        self.scanner.append("","—");self.scanner.set_active(0)
+    def discover_scanners(self,*_):
+        def discover():
+            ok,out=cmd(["scanimage","-L"],20)
+            devices=re.findall(r"device \`([^']+)'",out)
+            if devices:return True,devices
+            return False,out[:300] or "No SANE scanners detected"
+        self.background(discover,self.found_scanners)
+    def found_scanners(self,r):
+        ok,devs=r
+        if not ok:return self.result(r)
+        self.scanner.remove_all()
+        for name in devs:self.scanner.append(name,name)
+        self.scanner.set_active(0)
+        self.notice.set_text(str(len(devs))+" scanner(s)")
+        return False
+    def choose_dest(self,*_):
+        d=Gtk.FileChooserDialog(title=self.tr("save"),transient_for=self,action=Gtk.FileChooserAction.SAVE)
+        d.add_buttons(self.tr("cancel"),Gtk.ResponseType.CANCEL,self.tr("ok"),Gtk.ResponseType.OK)
+        d.set_current_name("scan.png")
+        d.set_do_overwrite_confirmation(True)
+        if d.run()==Gtk.ResponseType.OK:self.dest.set_text(d.get_filename())
+        d.destroy()
+    def scan(self,*_):
+        dev=self.scanner.get_active_id() or self.scanner.get_child().get_text().strip()
+        if not dev:self.dialog("error","Discover and select scanner first");return
+        target=Path(self.dest.get_text()).expanduser()
+        if target.suffix.lower() not in (".png",".jpg",".jpeg",".tif",".tiff") or not target.parent.is_dir():
+            self.dialog("error","Choose an existing directory and a .png/.jpg/.tiff filename");return
+        if not self.dialog("confirm",str(target),True):return
+        args=["scanimage","-d",dev,"--resolution",self.dpi.get_active_id(),"--mode",self.mode.get_active_id(),"--format=png"]
+        if self.source.get_active_id()!="auto":args+=["--source",self.source.get_active_id()]
+        def work():
+            with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as f:temp=Path(f.name)
+            try:
+                with temp.open("wb") as fp:
+                    proc=subprocess.run(args,stdout=fp,stderr=subprocess.PIPE,timeout=150)
+                if proc.returncode:return False,proc.stderr.decode(errors="replace")[:900]
+                with Image.open(temp) as im:im.save(target)
+                return True,str(target)
+            finally:temp.unlink(missing_ok=True)
+        self.background(work,self.result)
+    def xsane(self,*_):
+        try:subprocess.Popen(["xsane"])
+        except OSError as e:self.dialog("error",e)
+    def build_modules(self):
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=12,margin=12)
+        box.pack_start(self.label("module-note"),False,False,0)
+        for p in self.profiles:box.pack_start(Gtk.Label(label=str(p.get("id"))+" / "+p["match"],xalign=0),False,False,0)
+        self.pages.append_page(box,self.label("modules"))
+
+if __name__=="__main__":
+    w=Manager();w.show_all();Gtk.main()

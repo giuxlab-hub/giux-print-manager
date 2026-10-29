@@ -1,0 +1,11 @@
+{
+  "id":"canon-g600", "match":"Canon_G600", "web_url":"http://192.168.1.107/",
+  "photo_media":[
+    {"key":"Stationery","label":"Plain paper"},
+    {"key":"Photographic","label":"Photo paper"},
+    {"key":"Com.canon.mtglossy","label":"Canon Glossy"},
+    {"key":"Com.canon.mtluster","label":"Canon Luster"},
+    {"key":"Com.canon.mtmat","label":"Canon Matte"},
+    {"key":"Com.canon.mtsemisuper","label":"Canon Semi-gloss"}
+  ]
+}
