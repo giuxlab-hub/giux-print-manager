@@ -1,0 +1,11 @@
+Package: giux-print-manager
+Version: 0.1.1
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: GiuxLab <noreply@giux-lab.it>
+Depends: python3, python3-gi, gir1.2-gtk-3.0, python3-pil, cups-client, sane-utils, sane-airscan, xdg-utils
+Recommends: xsane
+Description: Modular bilingual print, photo and scan GUI
+ GTK3 front end for CUPS printing, photo layouts and SANE scanners.
+ Includes extensible model profiles, Canon G600 and Brother DCP-L2665DW.

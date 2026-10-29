@@ -1,8 +1,20 @@
 {
- "id":"brother-dcp-l2665dw", "match":"Brother_DCP_L2665DW", "web_url":"http://192.168.1.112/",
- "photo_media":[
-   {"key":"Stationery","label":"Plain paper"},
-   {"key":"StationeryHeavyweight","label":"Heavyweight laser-compatible paper"},
-   {"key":"Com.brotherThicker","label":"Thicker laser-compatible paper"}
- ]
+  "id": "brother-dcp-l2665dw",
+  "match": "Brother_DCP_L2665DW",
+  "web_url": "http://192.168.1.112/",
+  "photo_media": [
+    {
+      "key": "Stationery",
+      "label": "Plain paper"
+    },
+    {
+      "key": "StationeryHeavyweight",
+      "label": "Heavyweight laser-compatible paper"
+    },
+    {
+      "key": "Com.brotherThicker",
+      "label": "Thicker laser-compatible paper"
+    }
+  ],
+  "scanner_url": "http://192.168.1.112:80/eSCL/"
 }

@@ -34,6 +34,23 @@ def cmd(args,timeout=10):
         p=subprocess.run(args,capture_output=True,text=True,timeout=timeout)
         return (p.returncode==0,(p.stdout+p.stderr).strip())
     except (OSError,subprocess.TimeoutExpired) as e:return (False,str(e))
+def scanner_environment(profiles):
+    """Provide an isolated SANE config for declared eSCL profiles only.
+
+    This avoids slow backend-wide discovery and does not alter /etc/sane.d.
+    """
+    directory = Path.home() / ".cache/giux-print-manager/sane"
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "dll.conf").write_text("airscan\n", encoding="utf-8")
+    lines = ["[devices]"]
+    for p in profiles:
+        url = p.get("scanner_url", "")
+        if url.startswith(("http://", "https://")) and "\n" not in url:
+            lines.append(p["id"] + " = " + url + ", eSCL")
+    lines.extend(["[options]", "discovery = disable", ""])
+    (directory / "airscan.conf").write_text("\n".join(lines), encoding="utf-8")
+    return {**os.environ, "SANE_CONFIG_DIR": str(directory)}
+
 def load_profiles():
     profiles=[]
     for folder in (PROFILES,HOME_PROFILES):
@@ -51,7 +68,7 @@ class Manager(Gtk.Window):
         self.set_default_size(810,650);self.set_border_width(12)
         self.connect("destroy",Gtk.main_quit)
         self.lang=0 if os.environ.get("LANG","").lower().startswith("it") else 1
-        self.profiles=load_profiles();self.image_path=None
+        self.profiles=load_profiles();self.scan_env=scanner_environment(self.profiles);self.image_path=None
         self.root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);self.add(self.root)
         header=Gtk.Box(spacing=10)
         label=Gtk.Label(label="GiuxLab Print & Scan Manager",xalign=0)
@@ -217,7 +234,11 @@ class Manager(Gtk.Window):
         self.scanner.append("","—");self.scanner.set_active(0)
     def discover_scanners(self,*_):
         def discover():
-            ok,out=cmd(["scanimage","-L"],20)
+            try:
+                p=subprocess.run(["scanimage","-L"],env=self.scan_env,capture_output=True,text=True,timeout=12)
+                ok,out=(p.returncode==0),(p.stdout+p.stderr).strip()
+            except (OSError,subprocess.TimeoutExpired) as exc:
+                return False,str(exc)
             devices=re.findall(r"device \`([^']+)'",out)
             if devices:return True,devices
             return False,out[:300] or "No SANE scanners detected"
@@ -250,7 +271,7 @@ class Manager(Gtk.Window):
             with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as f:temp=Path(f.name)
             try:
                 with temp.open("wb") as fp:
-                    proc=subprocess.run(args,stdout=fp,stderr=subprocess.PIPE,timeout=150)
+                    proc=subprocess.run(args,env=self.scan_env,stdout=fp,stderr=subprocess.PIPE,timeout=150)
                 if proc.returncode:return False,proc.stderr.decode(errors="replace")[:900]
                 with Image.open(temp) as im:im.save(target)
                 return True,str(target)

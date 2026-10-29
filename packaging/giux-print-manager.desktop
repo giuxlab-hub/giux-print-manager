@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=GiuxLab Print & Scan Manager
+Name[it]=GiuxLab Gestione Stampanti e Scanner
+Comment=Printers, photos and scanners
+Comment[it]=Stampanti, fotografie e scanner
+Exec=giux-print-manager
+Icon=giux-print-manager
+Terminal=false
+Categories=System;GTK;
+Keywords=CUPS;SANE;Print;Scan;Photo;Stampa;Scanner;
+StartupNotify=true
