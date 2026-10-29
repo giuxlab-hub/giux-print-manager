@@ -30,3 +30,15 @@ Original Debian assets, including the desktop launcher and SVG icon, are availab
 - Checked profile JSON schemas and ran a local Debian packaging rebuild from the public checkout.
 
 No printer, scanner, official web interface or printer consumable was exercised as part of publication. The experimental architecture and unimplemented capabilities remain described in the original documentation.
+
+## Version 0.2.0 — first independent photo-adjustment component
+
+Version 0.2.0 is a new GitHub-developed incremental release on top of the accepted 0.1.1 source. The original 0.1.0 and 0.1.1 Debian/source archives and repository commits remain unchanged.
+
+The runtime application delegates the photo preview/editor to `photo_editor.py`. ImageMagick 7 performs rotation, mirrors, brightness/contrast, saturation, sharpness, blur and selected filter operations. The GUI provides a pan/zoom GTK canvas and slider-only adjustment controls. Full-resolution printing uses the same transforms as the bounded preview, without altering the original input file.
+
+The Debian package installs the helper in `/usr/lib/giux-print-manager/`, declares ImageMagick 7 as a required runtime dependency, and contains current documentation and the original GPLv3 license. `packaging/control` reflects the new version's package metadata.
+
+The public `tests/` directory contains image-processing and widget contract checks. These and a locally extracted Debian-package smoke test were run without print jobs, scanner operations or changes to CUPS/SANE configuration.
+
+Unlike 0.1.0/0.1.1, the 0.2.0 Debian package is generated from the published repository source and is **not** presented as an author-provided original. Its SHA-256 and source archive SHA-256 are documented in the corresponding GitHub release.

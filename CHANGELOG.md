@@ -1,0 +1,26 @@
+# Changelog
+
+## 0.2.0 — Interactive photo canvas and ImageMagick processing
+
+- Introduced a new `photo_editor.py` module for non-destructive photo transformations shared by preview and final printing.
+- Replaced the static GTK image preview with a GTK DrawingArea canvas supporting left/middle-button pan, cursor-centered wheel zoom, and fit-to-view.
+- Added rotation left/right by 90°, fine-angle rotation by slider, and horizontal/vertical mirror toggles.
+- Added slider-only controls for brightness, contrast, saturation, sharpening and blur; no editable numeric fields.
+- Added filter presets: original, grayscale, sepia and auto-level, with a Reset control.
+- Added asynchronous bounded preview rendering, debounced slider updates, stale-preview cancellation and error/status messages.
+- Print output applies the same transforms at full resolution before the existing 300 DPI CUPS page layout, with independent Fit/Fill selection and 3 mm margins.
+- Preserved photo and adjustment state during Italian/English UI language changes.
+- Declared ImageMagick 7 as a runtime dependency and packaged the independent module under `/usr/lib/giux-print-manager/`.
+- Added source-only and live ImageMagick tests. The original photo is never overwritten.
+- Preserved original CUPS/SANE and printer-profile behavior. No physical-printer validation claimed.
+
+## 0.1.1 — Isolated SANE/eSCL profiles
+
+- Introduced an isolated per-user SANE configuration scoped to the declared eSCL scanner profiles.
+- Updated Canon G600 and Brother DCP-L2665DW JSON profiles to include scanner endpoints.
+- Preserved original author `.deb` and source tarball.
+
+## 0.1.0 — Initial experimental release
+
+- GTK3 application integrating CUPS printer queues, simple photo-print layouts and SANE scanning.
+- Bilingual Italian/English UI with JSON printer profile configuration.

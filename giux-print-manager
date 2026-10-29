@@ -6,7 +6,11 @@ from pathlib import Path
 import gi
 gi.require_version("Gtk","3.0")
 from gi.repository import Gtk, GLib, GdkPixbuf
-from PIL import Image, ImageOps
+from PIL import Image
+import sys
+# Local source checkout and Debian-installed helper module share the same API.
+sys.path.append("/usr/lib/giux-print-manager")
+from photo_editor import PhotoEditor, render_print_page
 
 PROFILES=Path("/usr/share/giux-print-manager/profiles")
 HOME_PROFILES=Path.home()/".config/giux-print-manager/profiles"
@@ -27,7 +31,10 @@ T={
 "note":("Nessun driver o configurazione CUPS viene modificato.","No CUPS driver or configuration is modified."),
 "paper-note":("Caricare il supporto corrispondente. Margine di 3 mm: non è stampa senza bordi.","Load matching paper. 3 mm margin: this is not borderless printing."),
 "module-note":("I nuovi modelli si aggiungono con profili JSON nella cartella ~/.config/giux-print-manager/profiles","Add models using JSON profiles in ~/.config/giux-print-manager/profiles"),
-"wait":("Operazione in corso…","Working…"),"ready":("Pronto","Ready")
+"wait":("Operazione in corso…","Working…"),"ready":("Pronto","Ready"),
+"edit-photo":("Elaborazione fotografica","Photo adjustments"),
+"preview-pending":("Attendere l’aggiornamento dell’anteprima prima della stampa.","Wait for the preview update before printing."),
+"pick-photo-first":("Selezionare prima una foto.","Choose a photo first.")
 }
 def cmd(args,timeout=10):
     try:
@@ -66,9 +73,10 @@ class Manager(Gtk.Window):
     def __init__(self):
         super().__init__(title="GiuxLab Print & Scan Manager")
         self.set_default_size(810,650);self.set_border_width(12)
-        self.connect("destroy",Gtk.main_quit)
+        self.connect("destroy",self.on_destroy)
         self.lang=0 if os.environ.get("LANG","").lower().startswith("it") else 1
         self.profiles=load_profiles();self.scan_env=scanner_environment(self.profiles);self.image_path=None
+        self.photo_editor=None
         self.root=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10);self.add(self.root)
         header=Gtk.Box(spacing=10)
         label=Gtk.Label(label="GiuxLab Print & Scan Manager",xalign=0)
@@ -80,6 +88,9 @@ class Manager(Gtk.Window):
         self.pages=Gtk.Notebook();self.root.pack_start(self.pages,True,True,0)
         self.notice=Gtk.Label(xalign=0);self.root.pack_start(self.notice,False,False,0)
         self.build()
+    def on_destroy(self,*_):
+        if self.photo_editor is not None:self.photo_editor.close()
+        Gtk.main_quit()
     def tr(self,key):return T.get(key,(key,key))[self.lang]
     def label(self,key):return Gtk.Label(label=self.tr(key),xalign=0)
     def row(self,box,key,widget):
@@ -115,7 +126,18 @@ class Manager(Gtk.Window):
         self.refresh()
     def change_language(self,w):
         i=w.get_active()
-        if i!=self.lang and i>=0:self.lang=i;self.build()
+        if i==self.lang or i<0:return
+        snapshot=self.photo_editor.export_state() if self.photo_editor else None
+        options={key:getattr(self,key).get_active_id() for key in ("size","media","quality","layout")}
+        self._retained_printer_queues=(self.printer.get_active_id(),self.photo_printer.get_active_id())
+        if self.photo_editor is not None:self.photo_editor.close()
+        self.lang=i
+        self.build()
+        for key,value in options.items():
+            if value is not None:getattr(self,key).set_active_id(value)
+        if snapshot is not None:
+            try:self.photo_editor.restore_state(snapshot)
+            except Exception as exc:self.dialog("error",exc)
     def profile(self,name):
         for p in reversed(self.profiles):
             if p["match"].casefold() in name.casefold():return p
@@ -131,6 +153,10 @@ class Manager(Gtk.Window):
         if not good:return self.result(r)
         names=[n.strip() for n in out.splitlines() if n.strip() and " " not in n]
         old=(self.printer.get_active_id(),self.photo_printer.get_active_id())
+        saved=getattr(self,"_retained_printer_queues",None)
+        if saved is not None:
+            old=saved
+            self._retained_printer_queues=None
         for w in (self.printer,self.photo_printer):
             w.remove_all()
             for n in names:w.append(n,n)
@@ -161,15 +187,31 @@ class Manager(Gtk.Window):
         box.pack_start(self.label("note"),False,False,0)
         self.pages.append_page(box,self.label("printers"))
     def build_photo(self):
-        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=8,margin=12)
+        box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=7,margin=6)
         self.photo_printer=self.row(box,"printer",Gtk.ComboBoxText())
-        self.button(box,"choose",self.pick_photo)
-        self.preview=Gtk.Image();self.preview.set_size_request(300,190)
-        box.pack_start(self.preview,True,True,0)
-        self.size=self.row(box,"size",self.combo([("A4","A4"),("4x6","10×15 (4×6)"),("5x7","13×18 (5×7)"),("A5","A5")]))
-        self.media=self.row(box,"media",Gtk.ComboBoxText())
-        self.quality=self.row(box,"quality",self.combo([(q,q) for q in ("Draft","Normal","High")]))
-        self.layout=self.row(box,"layout",self.combo([("fit",self.tr("fit")),("fill",self.tr("fill"))]))
+        actions=Gtk.Box(spacing=8)
+        self.button(actions,"choose",self.pick_photo)
+        box.pack_start(actions,False,False,0)
+        self.photo_editor=PhotoEditor(
+            language="it" if self.lang==0 else "en",
+            status=lambda text:self.notice.set_text(text[:220]),
+        )
+        box.pack_start(self.photo_editor,True,True,0)
+        print_options=Gtk.Grid(column_spacing=8,row_spacing=5)
+        selections=(
+            ("size","size",self.combo([("A4","A4"),("4x6","10×15 (4×6)"),("5x7","13×18 (5×7)"),("A5","A5")])),
+            ("media","media",Gtk.ComboBoxText()),
+            ("quality","quality",self.combo([(q,q) for q in ("Draft","Normal","High")])),
+            ("layout","layout",self.combo([("fit",self.tr("fit")),("fill",self.tr("fill"))])),
+        )
+        for pos,(attr,key,widget) in enumerate(selections):
+            col=(pos%2)*2
+            row=pos//2
+            print_options.attach(self.label(key),col,row,1,1)
+            widget.set_hexpand(True)
+            print_options.attach(widget,col+1,row,1,1)
+            setattr(self,attr,widget)
+        box.pack_start(print_options,False,False,0)
         self.button(box,"print",self.print_photo)
         box.pack_start(self.label("paper-note"),False,False,0)
         self.photo_printer.connect("changed",self.update_media)
@@ -188,36 +230,42 @@ class Manager(Gtk.Window):
         for pattern in ("*.jpg","*.jpeg","*.png","*.tif","*.tiff"):f.add_pattern(pattern)
         d.add_filter(f)
         if d.run()==Gtk.ResponseType.OK:
-            self.image_path=d.get_filename()
-            try:self.preview.set_from_pixbuf(GdkPixbuf.Pixbuf.new_from_file_at_scale(self.image_path,350,210,True))
-            except Exception as e:self.dialog("error",e)
+            filename=d.get_filename()
+            try:
+                self.photo_editor.open_image(filename)
+                self.image_path=filename
+            except Exception as exc:self.dialog("error",exc)
         d.destroy()
+
     def print_photo(self,*_):
-        if not self.image_path:self.dialog("error","Choose photo first");return
+        editor=self.photo_editor
+        if editor is None or editor.source is None:
+            self.dialog("error",self.tr("pick-photo-first"));return
+        if not editor.preview_current:
+            self.dialog("error",self.tr("preview-pending"));return
         try:
             q=self.selected(self.photo_printer)
-            size=self.size.get_active_id();media=self.media.get_active_id()
-            quality=self.quality.get_active_id();layout=self.layout.get_active_id()
-        except Exception as e:self.dialog("error",e);return
-        if not self.dialog("confirm",f"{q}\n{self.image_path}\n{size} / {media} / {quality}",True):return
-        path=self.image_path
+            size=self.size.get_active_id()
+            media=self.media.get_active_id()
+            quality=self.quality.get_active_id()
+            layout=self.layout.get_active_id()
+            source,settings=editor.export_state()
+            if not all((q,size,media,quality,layout)) or source is None:
+                raise ValueError("Missing printer or photo options")
+        except Exception as exc:
+            self.dialog("error",exc);return
+        if not self.dialog("confirm",f"{q}\n{source}\n{size} / {media} / {quality}",True):return
+
         def work():
-            dimensions={"A4":(210,297),"A5":(148,210),"4x6":(101.6,152.4),"5x7":(127,177.8)}
-            width,height=dimensions[size]
-            W,H=round(width*300/25.4),round(height*300/25.4)
-            with Image.open(path) as raw:
-                im=ImageOps.exif_transpose(raw).convert("RGB")
-                if (im.width>im.height)!=(W>H):W,H=H,W
-                margin=round(3*300/25.4);frame=(W-2*margin,H-2*margin)
-                if layout=="fill":im=ImageOps.fit(im,frame,method=Image.Resampling.LANCZOS)
-                else:im.thumbnail(frame,Image.Resampling.LANCZOS)
-                page=Image.new("RGB",(W,H),"white")
-                page.paste(im,((W-im.width)//2,(H-im.height)//2))
-            with tempfile.NamedTemporaryFile(suffix=".png",delete=False) as f:tmp=f.name
-            try:
-                page.save(tmp)
-                return cmd(["lp","-d",q,"-o","PageSize="+size,"-o","MediaType="+media,"-o","cupsPrintQuality="+quality,"-o","print-scaling=none",tmp],25)
-            finally:os.unlink(tmp)
+            with tempfile.TemporaryDirectory(prefix="giux-print-photo-") as directory:
+                page=Path(directory)/"print-page.png"
+                render_print_page(source,settings,size,layout,page)
+                return cmd([
+                    "lp","-d",q,"-o","PageSize="+size,
+                    "-o","MediaType="+media,
+                    "-o","cupsPrintQuality="+quality,
+                    "-o","print-scaling=none",str(page),
+                ],25)
         self.background(work,self.result)
     def build_scanner(self):
         box=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=10,margin=12)

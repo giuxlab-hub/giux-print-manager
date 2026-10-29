@@ -2,11 +2,19 @@
 
 **Experimental, modular GTK3 desktop application for Linux printing, photo layouts and SANE scanning.**
 
-**Latest version:** 0.1.1 · **Languages:** Italian and English · **License:** GPL-3.0-or-later · **Platform:** Debian/Linux
+**Latest version:** 0.2.0 · **Languages:** Italian and English · **License:** GPL-3.0-or-later · **Platform:** Debian/Linux
 
 [Download Debian package and original source](https://github.com/giuxlab-hub/giux-print-manager/releases/latest) · [Giux-Lab](https://giux-lab.it/) · [Original README](README.original.md)
 
 GiuxLab Print & Scan Manager integrates three distinct workflows into one desktop interface: CUPS printer queues, photo printing, and SANE scanner acquisition. Printer-model extensions are currently **declarative JSON profiles**, not independent executable plugins. The architecture is an early-stage project and is published as such.
+
+## New in 0.2.0 — photo editing with sliders
+
+The photo workspace now includes an interactive **pan/zoom canvas**, 90° rotation buttons, a fine-angle slider, horizontal and vertical reflections and an **ImageMagick 7** adjustments panel. Brightness, contrast, saturation, sharpening and blur are controlled with **sliders only**, without numerical input fields. Filters include **Grayscale, Sepia and Auto levels**. A reset control restores the original appearance.
+
+The original image is never modified. Preview and printing use the same ImageMagick transformations; printed output is processed at full resolution. Zoom and pan affect only canvas navigation, while Fit/Fill remains an independent print-layout choice. The image, controls and print selections are retained when switching the interface language.
+
+Full instructions: [Photo workspace guide](README.package.md) and [Changelog](CHANGELOG.md).
 
 ## Features
 
@@ -28,13 +36,13 @@ In v0.1.1, scanner discovery and scanning use an isolated SANE configuration in 
 
 ## Debian installation
 
-Download `giux-print-manager_0.1.1_all.deb` from [v0.1.1 releases](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.1.1), then:
+Download `giux-print-manager_0.2.0_all.deb` from [v0.2.0 releases](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.2.0), then:
 
 ```bash
-sudo apt install ./giux-print-manager_0.1.1_all.deb
+sudo apt install ./giux-print-manager_0.2.0_all.deb
 ```
 
-Required Debian packages are `python3`, `python3-gi`, `gir1.2-gtk-3.0`, `python3-pil`, `cups-client`, `sane-utils`, `sane-airscan` and `xdg-utils`. The optional `xsane` package is recommended.
+Required Debian packages are `python3`, `python3-gi`, `gir1.2-gtk-3.0`, `python3-pil`, `imagemagick` (ImageMagick 7), `cups-client`, `sane-utils`, `sane-airscan` and `xdg-utils`. The optional `xsane` package is recommended.
 
 Start the application through the desktop applications menu or:
 
@@ -52,7 +60,7 @@ cd giux-print-manager
 ./build-deb.sh
 ```
 
-The repository builder writes `giux-print-manager_0.1.1_all.deb` in the checkout directory. Its output path is portable and its installed documentation is taken from `README.original.md`; the full original builder is preserved in the v0.1.1 source archive.
+The repository builder writes `giux-print-manager_0.2.0_all.deb` in the checkout directory, installing the new `photo_editor.py` helper under `/usr/lib/giux-print-manager/`. The original 0.1.1 sources and archives are preserved independently.
 
 ## Current limitations
 
@@ -67,7 +75,7 @@ This is an **experimental** desktop application, not a finished general-purpose 
 
 ## Source, history and license
 
-Version **0.1.0** is retained in its original Debian and source archives. Version **0.1.1** adds a private per-user SANE backend configuration for eSCL scanning and avoids global backend discovery. Both versions are published with original, unmodified Debian/source assets and SHA-256 checksums.
+Versions **0.1.0** and **0.1.1** remain available with their original Debian/source archives and SHA-256 checksums. Version **0.2.0** adds ImageMagick-based photo editing and an interactive zoom/pan canvas while preserving the CUPS and SANE authorities.
 
 Source code is provided under **GNU GPL v3 or later (GPL-3.0-or-later)**; see [COPYING](COPYING). Canon and Brother names are used to identify compatible printers; this project is **not affiliated** with their manufacturers.
 
@@ -77,7 +85,13 @@ Source code is provided under **GNU GPL v3 or later (GPL-3.0-or-later)**; see [C
 
 **GiuxLab Print & Scan Manager** è un'applicazione sperimentale indipendente per **stampa, fotografie e scansioni** in ambiente Linux, realizzata in Python 3/GTK3.
 
-La versione disponibile è la **0.1.1**. L'interfaccia è in italiano e inglese, con selezione della lingua durante l'utilizzo.
+La versione disponibile è la **0.2.0**. L'interfaccia è in italiano e inglese, con selezione della lingua durante l'utilizzo.
+
+### Novità della 0.2.0: regolazione delle immagini
+
+La pagina fotografica comprende **canvas navigabile con pan trascinando e zoom con la rotella**, rotazione a passi di 90°, inclinazione fine, riflessione orizzontale/verticale e regolazioni ImageMagick di **luminosità, contrasto, saturazione, nitidezza e sfocatura**. I parametri si impostano soltanto con **cursori**, senza caselle numeriche. Sono disponibili filtri bianco e nero, seppia e livelli automatici.
+
+Le modifiche sono non distruttive: l'immagine originale rimane intatta e l'output di stampa applica i medesimi filtri dell'anteprima, a piena risoluzione. Il pan e lo zoom non modificano l'impaginazione finale.
 
 ### Funzioni presenti
 
@@ -89,10 +103,10 @@ La versione disponibile è la **0.1.1**. L'interfaccia è in italiano e inglese,
 
 ### Installazione
 
-Scaricare [il pacchetto Debian 0.1.1](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.1.1):
+Scaricare [il pacchetto Debian 0.2.0](https://github.com/giuxlab-hub/giux-print-manager/releases/tag/v0.2.0):
 
 ```bash
-sudo apt install ./giux-print-manager_0.1.1_all.deb
+sudo apt install ./giux-print-manager_0.2.0_all.deb
 ```
 
 I profili attuali rappresentano **moduli dichiarativi di configurazione**, non un sistema completo di plugin eseguibili. Gli indirizzi IP contenuti nei profili sono esempi del sistema di sviluppo e devono essere adattati alla propria rete.
